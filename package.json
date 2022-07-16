@@ -13,6 +13,7 @@
 		"format": "prettier --write --plugin-search-dir=. ."
 	},
 	"devDependencies": {
+		"@solana/wallet-adapter-base": "^0.9.9",
 		"@sveltejs/adapter-auto": "next",
 		"@sveltejs/kit": "next",
 		"@types/cookie": "^0.5.1",
@@ -33,6 +34,10 @@
 	"type": "module",
 	"dependencies": {
 		"@fontsource/fira-mono": "^4.5.0",
+		"@solana/wallet-adapter-wallets": "^0.16.8",
+		"@solana/web3.js": "^1.47.3",
+		"@svelte-on-solana/wallet-adapter-core": "^1.0.6-alpha.0",
+		"@svelte-on-solana/wallet-adapter-ui": "^1.0.17-alpha.0",
 		"cookie": "^0.4.1"
 	}
 }
