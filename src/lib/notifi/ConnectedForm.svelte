@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 	import type { SvelteNotifiClient } from './SvelteNotifiClient';
+	import { clientState } from './stores';
+	import { get } from 'svelte/store';
 
 	export let adapter: MessageSignerWalletAdapter;
 	export let notifiClient: SvelteNotifiClient;
@@ -9,32 +11,32 @@
 	let telegramInput = '';
 	let announcementsSubscribed = false;
 
-	const isAuthenticated = notifiClient._token !== '';
-
 	const alertToken = () => {
-		alert(`Authorization: Bearer ${notifiClient._token}`);
-	}
+		alert(`Authorization: Bearer ${get(clientState).token}`);
+	};
 
 	const handleSubmit = () => {
 		console.log('Submit!', emailInput, telegramInput, announcementsSubscribed, adapter);
 	};
 </script>
 
-<div class="subscriptions">
-	<h1>Subscription Sample</h1>
+<div class="notifi">
 	<div>
-		{#if isAuthenticated}
-			Logged in!
-			<button on:click={alertToken}>Show token</button>
+		{#if $clientState.token !== null}
+			Logged in!<br />
+			<button on:click={() => alertToken()}>Show token</button>
 			<button on:click={() => notifiClient.logOut().catch(console.log)}>Log out</button>
 		{/if}
-		{#if !isAuthenticated}
-			Log in
+		{#if $clientState.token === null}
+			Not logged in<br />
 			<button on:click={() => notifiClient.logIn(adapter).catch(console.log)}>Log in</button>
 		{/if}
 	</div>
 
-	<form disabled={!isAuthenticated}>
+	<br />
+	<br />
+
+	<form disabled={$clientState.token === null}>
 		<fieldset>
 			<legend>Contact Information</legend>
 			<label for="email">Email Address</label>
@@ -48,5 +50,6 @@
 			<input type="checkbox" bind:checked={announcementsSubscribed} />
 		</fieldset>
 	</form>
+	<br />
 	<button on:click={handleSubmit}>Subscribe</button>
 </div>

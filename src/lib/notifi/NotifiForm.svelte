@@ -1,34 +1,49 @@
 <script lang="ts">
-import { onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 
 	import ConnectedForm from './ConnectedForm.svelte';
-	import { DAPP_ADDRESS, notifiService } from './service';
-	import { adapterValues } from './stores';
-	import { SvelteNotifiClient } from './SvelteNotifiClient';
-
-    let notifiClient: SvelteNotifiClient | null = null;
-    const unsubscribe = adapterValues.subscribe(values => {
-        if (values.publicKey === null) {
-            notifiClient = null;
-        } else {
-            notifiClient = new SvelteNotifiClient(DAPP_ADDRESS, values.publicKey, notifiService)
-        }
-    });
-
-    onDestroy(() => {
-        unsubscribe();
-    })
+	import {
+		adapterValues,
+		notifiClient,
+		clientState,
+		dappAddress,
+		notifiEnvironment
+	} from './stores';
 </script>
 
-{#if notifiClient === null}
-	<div>Please connect a wallet to use Notifi</div>
-{/if}
-{#if notifiClient !== null && $adapterValues.signerAdapter === null}
-	<div>This wallet does not support signing messages</div>
-{/if}
-{#if notifiClient !== null && $adapterValues.signerAdapter !== null}
-	<ConnectedForm
-		adapter={$adapterValues.signerAdapter}
-		{notifiClient}
-	/>
-{/if}
+<form />
+
+<div class="notifi">
+	<form>
+		<fieldset>
+			<legend>Notifi Configuration</legend>
+			<label for="dappAddress">dApp Address</label>
+			<input
+				type="text"
+				name="dappAddress"
+				bind:value={$dappAddress}
+				disabled={$clientState.token !== null}
+			/>
+			<label for="environment">Environment</label>
+			<input
+				type="text"
+				name="environment"
+				bind:value={$notifiEnvironment}
+				disabled={$clientState.token !== null}
+			/>
+		</fieldset>
+	</form>
+
+	<br />
+	<br />
+
+	{#if $notifiClient === null}
+		<div>Please connect a wallet to use Notifi</div>
+	{/if}
+	{#if $notifiClient !== null && $adapterValues.signerAdapter === null}
+		<div>This wallet does not support signing messages</div>
+	{/if}
+	{#if $notifiClient !== null && $adapterValues.signerAdapter !== null}
+		<ConnectedForm adapter={$adapterValues.signerAdapter} notifiClient={$notifiClient} />
+	{/if}
+</div>

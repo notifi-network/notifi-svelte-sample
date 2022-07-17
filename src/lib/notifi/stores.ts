@@ -1,40 +1,74 @@
-import { derived } from "svelte/store";
+import { get, writable, derived } from 'svelte/store';
 import type { PublicKey } from '@solana/web3.js';
 import type { WalletAdapter, MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
-import { SvelteNotifiClient } from "./SvelteNotifiClient";
-import { DAPP_ADDRESS, notifiService } from './service';
-import type { NotifiClient } from "@notifi-network/notifi-core";
+import type { SvelteNotifiClientState } from './SvelteNotifiClient';
+import { SvelteNotifiClient } from './SvelteNotifiClient';
+import type { NotifiEnvironment } from '@notifi-network/notifi-axios-utils';
+import { notifiConfigs } from '@notifi-network/notifi-axios-utils';
+import { NotifiAxiosService } from '@notifi-network/notifi-axios-adapter';
 
 export type AdapterValues = Readonly<{
-    publicKey: PublicKey | null;
-    signerAdapter: MessageSignerWalletAdapter | null;
+	publicKey: PublicKey | null;
+	signerAdapter: MessageSignerWalletAdapter | null;
 }>;
 
 const isMessageSigner = (adapter: WalletAdapter): adapter is MessageSignerWalletAdapter => {
-    return (<MessageSignerWalletAdapter>adapter).signMessage !== undefined;
-}
+	return (<MessageSignerWalletAdapter>adapter).signMessage !== undefined;
+};
 
-export const adapterValues = derived<typeof walletStore, AdapterValues>(
-    walletStore,
-    $store => {
-        let publicKey: PublicKey | null = null;
-        let signerAdapter: MessageSignerWalletAdapter | null = null;
-        const adapter = $store?.adapter ?? null;
-        if (adapter === null || adapter.publicKey === null) {
-            publicKey = null;
-            signerAdapter = null;
-        } else  {
-            publicKey = adapter.publicKey;
-            if (isMessageSigner(adapter)) {
-                signerAdapter = adapter;
-            } else {
-                signerAdapter = null;
-            }
-        }
-        return {
-            publicKey,
-            signerAdapter,
-        };
-    },
+export const adapterValues = derived<typeof walletStore, AdapterValues>(walletStore, ($store) => {
+	let publicKey: PublicKey | null = null;
+	let signerAdapter: MessageSignerWalletAdapter | null = null;
+	const adapter = $store?.adapter ?? null;
+	if (adapter === null || adapter.publicKey === null) {
+		publicKey = null;
+		signerAdapter = null;
+	} else {
+		publicKey = adapter.publicKey;
+		if (isMessageSigner(adapter)) {
+			signerAdapter = adapter;
+		} else {
+			signerAdapter = null;
+		}
+	}
+	return {
+		publicKey,
+		signerAdapter
+	};
+});
+
+export const dappAddress = writable<string>('ASK_NOTIFI_FOR_THIS_VALUE');
+export const notifiEnvironment = writable<NotifiEnvironment>('Development');
+export const notifiService = derived(notifiEnvironment, ($notifiEnvironment) => {
+	const { gqlUrl } = notifiConfigs($notifiEnvironment);
+	return new NotifiAxiosService({ gqlUrl });
+});
+
+export const clientState = writable<SvelteNotifiClientState>({
+	clientRandomUuid: null,
+	token: null,
+	roles: []
+});
+
+export const notifiClient = derived(
+	[adapterValues, dappAddress, notifiService],
+	([$adapterValues, $dappAddress, $notifiService]) => {
+		if ($adapterValues.publicKey === null) {
+			return null;
+		}
+
+		clientState.set({
+			clientRandomUuid: null,
+			token: null,
+			roles: []
+		});
+
+		return new SvelteNotifiClient(
+			$dappAddress,
+			$adapterValues.publicKey,
+			$notifiService,
+			clientState
+		);
+	}
 );

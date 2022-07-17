@@ -21,6 +21,14 @@ import type {
 } from '@notifi-network/notifi-core';
 import type { MessageSignerWalletAdapterProps } from '@solana/wallet-adapter-base';
 import type { PublicKey } from '@solana/web3.js';
+import type { Writable } from 'svelte/store';
+import { get } from 'svelte/store';
+
+export type SvelteNotifiClientState = {
+	clientRandomUuid: string | null;
+	token: string | null;
+	roles: ReadonlyArray<string>;
+};
 
 export class SvelteNotifiClient implements NotifiClient {
 	dappAddress: string;
@@ -28,15 +36,19 @@ export class SvelteNotifiClient implements NotifiClient {
 	walletAddress: string;
 	service: NotifiService;
 
-	_clientRandomUuid = '';
-	_token = '';
-	_roles: ReadonlyArray<string> = [];
+	stateContainer: Writable<SvelteNotifiClientState>;
 
-	constructor(dappAddress: string, publicKey: PublicKey, service: NotifiService) {
+	constructor(
+		dappAddress: string,
+		publicKey: PublicKey,
+		service: NotifiService,
+		stateContainer: Writable<SvelteNotifiClientState>
+	) {
 		this.dappAddress = dappAddress;
 		this.publicKey = publicKey;
 		this.walletAddress = publicKey.toBase58();
 		this.service = service;
+		this.stateContainer = stateContainer;
 	}
 
 	beginLoginViaTransaction = async () => {
@@ -56,7 +68,10 @@ export class SvelteNotifiClient implements NotifiClient {
 		const data = encoder.encode(`${nonce}${ruuid}`);
 		const hashBuffer = await crypto.subtle.digest('SHA-256', data);
 
-		this._clientRandomUuid = ruuid;
+		this.stateContainer.update(current => {
+			current.clientRandomUuid = ruuid;
+			return current;
+		});
 		const hashArray = Array.from(new Uint8Array(hashBuffer));
 		const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 		const logValue = `Notifi Auth: 0x${hashHex}`;
@@ -137,8 +152,8 @@ export class SvelteNotifiClient implements NotifiClient {
 	};
 
 	completeLoginViaTransaction = async (input: CompleteLoginViaTransactionInput) => {
-		const ruuid = this._clientRandomUuid;
-		if (ruuid === '') {
+		const ruuid = get(this.stateContainer).clientRandomUuid;
+		if (ruuid === null) {
 			throw new Error('Must call beginLoginViaTransaction first');
 		}
 
@@ -151,6 +166,10 @@ export class SvelteNotifiClient implements NotifiClient {
 			transactionSignature
 		});
 
+        this.stateContainer.update(current => {
+			current.clientRandomUuid = null;
+			return current;
+		});
 		this._handleLogInResult(result);
 
 		return result;
@@ -216,8 +235,11 @@ export class SvelteNotifiClient implements NotifiClient {
 
 	logOut = async () => {
 		this.service.setJwt(null);
-		this._token = '';
-		this._roles = [];
+		this.stateContainer.update(current => {
+			current.token = null;
+			current.roles = [];
+			return current;
+		});
 	};
 
 	createAlert = async (input: ClientCreateAlertInput) => {
@@ -247,11 +269,12 @@ export class SvelteNotifiClient implements NotifiClient {
 	};
 
 	getTopics = async () => {
-		if (this._roles.some((role) => role === 'UserMessenger')) {
-			return await this.service.getTopics();
-		} else {
+		const roles = get(this.stateContainer).roles;
+		if (!roles.some((role) => role === 'UserMessenger')) {
 			throw new Error('This user is not authorized for getTopics!');
 		}
+		
+		return await this.service.getTopics();
 	};
 
 	updateAlert = async (input: ClientUpdateAlertInput) => {
@@ -278,9 +301,12 @@ export class SvelteNotifiClient implements NotifiClient {
 
 	_handleLogInResult = (user: User) => {
 		const token = user.authorization?.token ?? null;
+		this.stateContainer.update(current => {
+			current.roles = user?.roles ?? [];
+			current.token = token;
+			return current;
+		});
 		this.service.setJwt(token);
-		this._roles = user?.roles ?? [];
-		this._token = '';
 	};
 
 	_signMessage = async (
