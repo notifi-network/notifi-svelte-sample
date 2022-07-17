@@ -2,6 +2,9 @@ import { derived } from "svelte/store";
 import type { PublicKey } from '@solana/web3.js';
 import type { WalletAdapter, MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
+import { SvelteNotifiClient } from "./SvelteNotifiClient";
+import { DAPP_ADDRESS, notifiService } from './service';
+import type { NotifiClient } from "@notifi-network/notifi-core";
 
 export type AdapterValues = Readonly<{
     publicKey: PublicKey | null;
