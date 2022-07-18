@@ -1,8 +1,8 @@
-import { get, writable, derived } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import type { PublicKey } from '@solana/web3.js';
 import type { WalletAdapter, MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
-import type { SvelteNotifiClientState } from './SvelteNotifiClient';
+import type { InternalData, SvelteNotifiClientState } from './SvelteNotifiClient';
 import { SvelteNotifiClient } from './SvelteNotifiClient';
 import type { NotifiEnvironment } from '@notifi-network/notifi-axios-utils';
 import { notifiConfigs } from '@notifi-network/notifi-axios-utils';
@@ -51,6 +51,8 @@ export const clientState = writable<SvelteNotifiClientState>({
 	roles: []
 });
 
+export const clientData = writable<InternalData | null>(null);
+
 export const notifiClient = derived(
 	[adapterValues, dappAddress, notifiService],
 	([$adapterValues, $dappAddress, $notifiService]) => {
@@ -68,7 +70,8 @@ export const notifiClient = derived(
 			$dappAddress,
 			$adapterValues.publicKey,
 			$notifiService,
-			clientState
+			clientState,
+			clientData
 		);
 	}
 );

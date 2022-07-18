@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { MessageSignerWalletAdapter } from '@solana/wallet-adapter-base';
 	import type { SvelteNotifiClient } from './SvelteNotifiClient';
-	import { clientState } from './stores';
+	import { clientState, clientData } from './stores';
 	import { get } from 'svelte/store';
 
 	export let adapter: MessageSignerWalletAdapter;
@@ -52,4 +52,9 @@
 	</form>
 	<br />
 	<button on:click={handleSubmit}>Subscribe</button>
+
+	<div>
+		<h5>Debug Data</h5>
+		<p>{JSON.stringify($clientData)}</p>
+	</div>
 </div>
